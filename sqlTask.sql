@@ -66,11 +66,18 @@ FROM Account INNER JOIN Card ON Account.Id = Card.IdAccount
 GROUP BY IdAccount
 HAVING SUM(BalanceAccount)/Count(*) <> SUM(BalanceCard)
 
-SELECT IdSocialStatus, SUM(CountCard)
-FROM Client INNER JOIN
-(SELECT Account.IdClient, AccountCards.CountCard 
-	FROM Account INNER JOIN
-	(SELECT Account.Id, Count(*) AS CountCard
-		FROM Account INNER JOIN Card ON Card.IdAccount = Account.Id
-		GROUP BY Account.Id ) AS AccountCards ON Account.Id = AccountCards.Id) AS AccountCountCards ON AccountCountCards.IdClient = Client.Id
-GROUP BY IdSocialStatus
+SELECT IdSocialStatus, StatusName, ClientCountCard
+FROM SocialStatus INNER JOIN
+	(SELECT IdSocialStatus, SUM(CountCard) AS ClientCountCard
+	FROM Client INNER JOIN
+	(SELECT Account.IdClient, AccountCards.CountCard 
+		FROM Account INNER JOIN
+		(SELECT Account.Id, Count(*) AS CountCard
+			FROM Account INNER JOIN Card 
+			ON Card.IdAccount = Account.Id
+			GROUP BY Account.Id ) AS AccountCards 
+		ON Account.Id = AccountCards.Id) AS AccountCountCards 
+	ON AccountCountCards.IdClient = Client.Id
+	GROUP BY IdSocialStatus) AS ClientCountCard
+ON SocialStatus.Id = ClientCountCard.IdSocialStatus;
+
