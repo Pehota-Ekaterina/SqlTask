@@ -81,3 +81,16 @@ FROM SocialStatus INNER JOIN
 	GROUP BY IdSocialStatus) AS ClientCountCard
 ON SocialStatus.Id = ClientCountCard.IdSocialStatus;
 
+SELECT Client.Id, FirstName, LastName, SumBalanceCardClient
+FROM Client INNER JOIN
+	(SELECT Client.Id AS Id, SUM(SumBalanceCard) AS SumBalanceCardClient
+	FROM Client INNER JOIN
+		(SELECT Account.IdClient, SumBalanceCard
+		FROM Account INNER JOIN
+			(SELECT IdClient, SUM(Card.BalanceCard) AS SumBalanceCard
+			FROM Account INNER JOIN Card ON Account.Id = Card.IdAccount
+			GROUP BY IdClient) AS AccountCard
+		ON Account.IdClient = AccountCard.IdClient) AS AccountCards
+	ON Client.Id = AccountCards.IdClient
+	GROUP BY Client.Id) AS ClientCards
+ON ClientCards.Id = Client.Id
