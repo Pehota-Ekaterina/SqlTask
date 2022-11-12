@@ -87,6 +87,53 @@ FROM SocialStatus INNER JOIN
 	GROUP BY IdSocialStatus) AS ClientCountCard
 ON SocialStatus.Id = ClientCountCard.IdSocialStatus;
 
+--5
+USE Banking;
+GO
+
+CREATE PROCEDURE ChangeBalanceAccount
+	@idSocialStatus INT
+AS
+BEGIN
+	IF NOT EXISTS ( SELECT 1 FROM SocialStatus WHERE SocialStatus.Id = @idSocialStatus )
+		BEGIN
+			PRINT 'social status with this id does not exist in the database'
+		END
+
+	ELSE IF NOT EXISTS(SELECT 1 FROM Client WHERE Client.IdSocialStatus = @idSocialStatus)
+		BEGIN
+			PRINT 'client with this social status does not exist in the database' 
+		END
+
+	ELSE
+		BEGIN
+			UPDATE ClientAccount
+			SET ClientAccount.BalanceAccount = ClientAccount.BalanceAccount + 10 
+			FROM
+				(SELECT Client.IdSocialStatus, BalanceAccount
+				FROM Client INNER JOIN Account
+				ON Client.Id = Account.IdClient) AS ClientAccount
+			WHERE ClientAccount.IdSocialStatus = @idSocialStatus
+		END
+END;
+GO
+
+SELECT StatusName, IdClient, FirstName, LastName, IdAccount, BalanceAccount
+FROM SocialStatus INNER JOIN
+	(SELECT Client.Id AS IdClient, FirstName, LastName, Account.Id AS IdAccount, BalanceAccount, IdSocialStatus
+	FROM Client INNER JOIN Account
+	ON Client.Id = Account.IdClient) AS ClientAccount
+ON SocialStatus.Id = ClientAccount.IdSocialStatus;
+
+EXEC ChangeBalanceAccount 5
+
+SELECT StatusName, IdClient, FirstName, LastName, IdAccount, BalanceAccount
+FROM SocialStatus INNER JOIN
+	(SELECT Client.Id AS IdClient, FirstName, LastName, Account.Id AS IdAccount, BalanceAccount, IdSocialStatus
+	FROM Client INNER JOIN Account
+	ON Client.Id = Account.IdClient) AS ClientAccount
+ON SocialStatus.Id = ClientAccount.IdSocialStatus;
+
 --6
 SELECT Client.Id, FirstName, LastName, SumBalanceCardClient
 FROM Client INNER JOIN
