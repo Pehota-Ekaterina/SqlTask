@@ -1,4 +1,6 @@
+--0
 CREATE DATABASE Banking;
+GO
 
 CREATE TABLE City
 (
@@ -49,23 +51,27 @@ CREATE TABLE Card
 	IdAccount INT NOT NULL CHECK(IdAccount > 0) REFERENCES Account (Id)
 );
 
+--1
 SELECT City.CityName, Bank.BankName
 FROM City
 INNER JOIN BankCity ON City.Id = BankCity.IdCity
 INNER JOIN Bank ON Bank.Id = BankCity.IdBank
 WHERE City.CityName = 'Минск';
 
+--2
 SELECT Account.Id, BalanceAccount, BankName, BalanceCard, FirstName, LastName
 FROM Account 
 INNER JOIN Card ON Card.IdAccount = Account.Id
 INNER JOIN Client ON Client.Id = Account.IdClient
 INNER JOIN Bank ON Bank.Id = Account.IdBank
 
-SELECT IdAccount, SUM(BalanceAccount)/Count(*) AS BalanceAccount,  SUM(Card.BalanceCard) AS SumBalanceCard, (SUM(BalanceAccount)/Count(*) - SUM(Card.BalanceCard)) AS div
+--3
+SELECT IdAccount, SUM(DISTINCT BalanceAccount) AS BalanceAccount,  SUM(Card.BalanceCard) AS SumBalanceCard, (SUM(DISTINCT BalanceAccount) - SUM(Card.BalanceCard)) AS div
 FROM Account INNER JOIN Card ON Account.Id = Card.IdAccount
 GROUP BY IdAccount
-HAVING SUM(BalanceAccount)/Count(*) <> SUM(BalanceCard)
+HAVING SUM(DISTINCT BalanceAccount) <> SUM(BalanceCard)
 
+--4
 SELECT IdSocialStatus, StatusName, ClientCountCard
 FROM SocialStatus INNER JOIN
 	(SELECT IdSocialStatus, SUM(CountCard) AS ClientCountCard
@@ -81,6 +87,7 @@ FROM SocialStatus INNER JOIN
 	GROUP BY IdSocialStatus) AS ClientCountCard
 ON SocialStatus.Id = ClientCountCard.IdSocialStatus;
 
+--6
 SELECT Client.Id, FirstName, LastName, SumBalanceCardClient
 FROM Client INNER JOIN
 	(SELECT Client.Id AS Id, SUM(SumBalanceCard) AS SumBalanceCardClient
