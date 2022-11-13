@@ -148,3 +148,73 @@ FROM Client INNER JOIN
 	ON Client.Id = AccountCards.IdClient
 	GROUP BY Client.Id) AS ClientCards
 ON ClientCards.Id = Client.Id
+
+--7
+USE Banking;
+GO
+
+CREATE PROCEDURE MoneyTransfer
+	@idAccount INT,
+	@transferAmount DECIMAL
+AS
+BEGIN
+	BEGIN TRY
+	BEGIN TRANSACTION
+
+	IF NOT EXISTS ( SELECT 1 FROM Account WHERE Account.Id = @idAccount )
+		BEGIN
+			PRINT 'this account does not exist'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+	ELSE IF NOT EXISTS ( SELECT 1 FROM Card WHERE Card.IdAccount = @idAccount )
+		BEGIN
+			PRINT 'this account has no cards'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+	ELSE IF EXISTS (SELECT IdAccount, SUM(DISTINCT BalanceAccount) AS BalanceAccount,  SUM(Card.BalanceCard) AS SumBalanceCard
+				FROM Account INNER JOIN Card ON Account.Id = Card.IdAccount
+				GROUP BY IdAccount
+				HAVING (SUM(DISTINCT BalanceAccount) - SUM(BalanceCard)) < @transferAmount)
+		BEGIN
+			PRINT 'not enough money to transfer'
+			ROLLBACK TRANSACTION
+			RETURN
+		END
+
+	ELSE
+		BEGIN
+			UPDATE AccountCard
+			SET BalanceCard = BalanceCard + @transferAmount
+			FROM
+				(SELECT IdAccount, Card.Id AS IdCard, BalanceCard
+				FROM Card INNER JOIN Account
+				ON Card.IdAccount = Account.Id) AS AccountCard
+			WHERE IdAccount = @idAccount
+		END
+
+	END TRY
+	BEGIN CATCH
+		ROLLBACK TRANSACTION
+		SELECT ERROR_NUMBER() AS [Номер ошибки],
+             ERROR_MESSAGE() AS [Описание ошибки]
+	RETURN
+	END CATCH
+	COMMIT TRANSACTION
+END;
+GO
+
+SELECT IdAccount, BalanceAccount, Card.Id AS IdCard, BalanceCard
+FROM Card INNER JOIN Account
+ON Card.IdAccount = Account.Id
+WHERE IdAccount = 2;
+
+EXEC MoneyTransfer 2, 1000
+
+SELECT IdAccount, BalanceAccount, Card.Id AS IdCard, BalanceCard
+FROM Card INNER JOIN Account
+ON Card.IdAccount = Account.Id
+WHERE IdAccount = 2;
